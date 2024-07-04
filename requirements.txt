@@ -1,0 +1,4 @@
+Flask
+Flask-Session
+Flask-Cors
+psycopg2-binary
