@@ -260,7 +260,6 @@ def problem_submit(problem_id):
     db = Database()
     problem = db.select_fetchone('select * from "problem" where id=%s', [problem_id])
 
-
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid or missing JSON data"}), 400
@@ -312,6 +311,24 @@ def problem_solution(problem_id):
         problem = db.select_fetchone('select * from "problem" where id=%s', [problem_id])
 
     return jsonify(problem), 200
+
+
+@app.route('/quiz/<int:quiz_id>/subject')
+def quiz2subject(quiz_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    subject = db.select_fetchone("""
+SELECT s.*
+FROM quiz q
+JOIN chapter c ON q.chapter_id=c.id
+JOIN subject s ON c.subject_id=s.id
+WHERE q.id=%s;
+    """, [quiz_id])
+
+    return jsonify(subject), 200
 
 
 
