@@ -277,7 +277,7 @@ def problem_submit(problem_id):
     print(result)
 
     if (result == "True"):
-        db.execute('update "problem" set user_answer=%s, is_correct=%s, progress=%s where id=%s', [data['user_answer'], True, (problem['progress'] + 1), problem_id])
+        db.execute('update "problem" set user_answer=%s, is_correct=%s where id=%s', [data['user_answer'], True, problem_id])
     else:
         db.execute('update "problem" set user_answer=%s, is_correct=%s, feedback=%s where id=%s', [data['user_answer'], False, result, problem_id])
 
