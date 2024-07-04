@@ -63,7 +63,7 @@ def generate_content(gpt_assistant_prompt: str, gpt_user_prompt: str) -> dict:
         model="gpt-4",
         messages=messages,
         temperature=0.2,
-        max_tokens=3000,
+        max_tokens=10000,
         frequency_penalty=0.0
     )
     response_text = response.choices[0].message.content
