@@ -11,6 +11,8 @@ from openai import OpenAI
 import pandas as pd
 import time
 
+from database import Database
+
 
 app = Flask(__name__)
 
@@ -22,7 +24,7 @@ app.config['SESSION_COOKIE_SECURE'] = True
 Session(app)
 
 cors = CORS(app, resources={
-  r"/api/*": {
+  r"/*": {
         "origin": "ict.pnu.app", 
         "allow_headers": ["Content-Type", "Authorization"]
     },
@@ -35,23 +37,6 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-def get_db_connection():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
-
-def execute_query(query, args=(), fetchone=False, fetchall=False, commit=False):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(query, args)
-    result = None
-    if fetchone:
-        result = cur.fetchone()
-    elif fetchall:
-        result = cur.fetchall()
-    if commit:
-        conn.commit()
-    cur.close()
-    conn.close()
-    return result
 
 def generate_content(gpt_assistant_prompt: str, gpt_user_prompt: str) -> dict:
     gpt_prompt = f"{gpt_assistant_prompt} {gpt_user_prompt}"
@@ -79,3 +64,50 @@ def index():
     
     result = generate_content(gpt_assistant_prompt, gpt_user_prompt)
     return jsonify(result), 200
+
+
+@app.route('/user', methods=['GET'])
+def get_user():
+    db = Database()
+    if 'user_id' in session:
+        user = db.select_fetchone('select * from "user" where id=%s', [session['user_id']])
+        print(user)
+        return jsonify(user), 200
+     
+    else:
+        return jsonify({"message": "User not logged in"}), 403
+    
+@app.route('/signup', methods=['POST'])
+def signup():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
+    db = Database()
+
+    user = db.select_fetchone('select * from "user" where email=%s', [data['email']])
+    if user is not None:
+        return jsonify({"message": "이미 가입된 이메일입니다"}), 400
+
+    user_id = db.execute_fetchone(
+        'insert into "user"(email, password, name) values (%s, %s, %s) RETURNING id',
+        [data['email'], data['password'], data['name']])[0]
+
+    user = db.select_fetchone('select * from "user" where id=%s', [user_id])
+
+    print(user)
+    return jsonify(user), 200
+
+
+@app.route('/signin', methods=['POST'])
+def signin():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
+    db = Database()
+
+    user = db.select_fetchone('select * from "user" where email=%s and password=%s', [data['email'], data['password']])
+    if user is None:
+        return jsonify({"message": "아이디 혹은 비밀번호가 일치하지 않습니다"}), 400
+
+    session['user_id'] = user['id']
+    return jsonify(user), 200
