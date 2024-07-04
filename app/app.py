@@ -192,6 +192,18 @@ def chapter_add(subject_id):
     return jsonify(chapter), 200
 
 
+@app.route('/subject/chapter/<int:chapter_id>', methods=['GET'])
+def quiz_list(chapter_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    quiz_list = db.select_fetchall('select * from "quiz" where chapter_id=%s order by id', [chapter_id])
+
+    return jsonify({"quiz": quiz_list}), 200
+
+
 @app.route('/subject/chapter/<int:chapter_id>/quiz', methods=['POST'])
 def quiz_create(chapter_id):
     user_id = session.get('user_id')
@@ -230,7 +242,7 @@ def quiz_create(chapter_id):
 
 
 @app.route('/subject/chapter/quiz/<int:quiz_id>', methods=['GET'])
-def quiz_list(quiz_id):
+def problem_list(quiz_id):
     user_id = session.get('user_id')
     if user_id is None:
         return jsonify({"message": "Invalid session or not logged in"}), 403
