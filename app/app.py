@@ -189,6 +189,36 @@ def chapter_add(subject_id):
     return jsonify(chapter), 200
 
 
+@app.route('/subject/chapter/<int:chapter_id>', methods=['POST'])
+def chapter_set(chapter_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
+
+    user_id = session.get('user_id')555555555
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    db.execute('update "chapter" set title=%s, content=%s where id=%s', [data['chapter'], data['contents'], chapter_id])
+
+    chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [chapter_id])
+
+    return jsonify(chapter), 200
+
+
+@app.route('/subject/chapter/<int:chapter_id>', methods=['POST'])
+def chapter_del(chapter_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    db.execute('delete from "chapter" where id=%s', [chapter_id])
+
+    return jsonify(), 200
+
+
 @app.route('/subject/chapter/<int:chapter_id>', methods=['GET'])
 def quiz_list(chapter_id):
     user_id = session.get('user_id')
