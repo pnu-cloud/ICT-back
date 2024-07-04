@@ -48,7 +48,7 @@ def generate_content(gpt_assistant_prompt: str, gpt_user_prompt: str) -> dict:
         model="gpt-4",
         messages=messages,
         temperature=0.2,
-        max_tokens=10000,
+        max_tokens=1024,
         frequency_penalty=0.0
     )
     response_text = response.choices[0].message.content
@@ -191,6 +191,54 @@ def chapter_add(subject_id):
 
     return jsonify(chapter), 200
 
+
+@app.route('/subject/chapter/<int:chapter_id>/quiz', methods=['POST'])
+def quiz_create(chapter_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    quiz_id = db.execute_fetchone(
+        'insert into "quiz"(chapter_id) values (%s) RETURNING id',
+        [chapter_id])[0]
+
+    chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [chapter_id])
+
+    gpt_assistant_prompt = """
+학생이 특정 지식을 학습할 수 있도록 제공한 목차나 내용에 대해 문제를 생성해야 하는데 제공되는 언어에 상관없이 한국어로 문제를 출제해줘.
+문제는 객관식이나 단답형 주관식을 적절히 섞어서 제작하고 추후 정답 확인이나 풀이는 별도로 질의할 예정이니 부가적인 설명은 생략하고 텍스트로만 이루어진 문제 본문만 작성해줘.
+여러 문제를 생성하되 JSON 배열로 텍스트로만 이루어지도록 결과를 생성해야 하고 문제 유형이나 보기를 별도로 JSON에 담지 말고 문제 본문 내에 함께 작성하고 문제 본문 앞에 숫자를 넣지말고 [문제 유형]을 넣어서 생생해줘 줄바꿈은 <br>로 하면 돼.
+문제 유형은 (객관식: 주어진 보기에서 숫자 고르기) (단답형: 설명을 보고 특정한 단어를 작성) (주관식: 주어진 상황을 서술식으로 설명해야 하는 문제)이야.
+    """
+    gpt_user_prompt = chapter.get('content', "")
+
+    results = generate_content(gpt_assistant_prompt, gpt_user_prompt)
+    print(results)
+    try:
+        results = json.loads(results)
+        for result in results:
+            db.execute_fetchone(
+            'insert into "problem"(quiz_id, question) values (%s, %s) RETURNING id',
+            [quiz_id, result])
+    except json.JSONDecodeError:
+        db.execute_fetchone(
+            'insert into "problem"(quiz_id, question) values (%s, %s) RETURNING id',
+            [quiz_id, results])
+        
+    return jsonify(), 200
+
+
+@app.route('/subject/chapter/quiz/<int:quiz_id>', methods=['GET'])
+def quiz_list(quiz_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    problems = db.select_fetchall('select * from "problem" where quiz_id=%s order by id', [quiz_id])
+
+    return jsonify({"problem": problems}), 200
 
 
 
