@@ -145,6 +145,17 @@ def subject_add():
     return jsonify(subject), 200
 
 
+@app.route('/subject/<int:subject_id>/chapter', methods=['GET'])
+def get_subject(subject_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    subject = db.select_fetchone('select id, title, text from "subject" where subject_id=%s', [subject_id])
+
+    return jsonify(subject), 200
+
 
 
 
