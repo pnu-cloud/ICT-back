@@ -195,7 +195,7 @@ def chapter_set(chapter_id):
     if not data:
         return jsonify({"error": "Invalid or missing JSON data"}), 400
 
-    user_id = session.get('user_id')555555555
+    user_id = session.get('user_id')
     if user_id is None:
         return jsonify({"message": "Invalid session or not logged in"}), 403
 
