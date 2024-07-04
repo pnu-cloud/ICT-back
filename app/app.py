@@ -164,10 +164,11 @@ def chapter_list(subject_id):
         return jsonify({"message": "Invalid session or not logged in"}), 403
 
     db = Database()
-    chapter = db.select_fetchall('select * from "chapter" where subject_id=%s order by id', [subject_id])
-    chapter['content'] = json.loads(chapter['content'])
+    chapters = db.select_fetchall('select * from "chapter" where subject_id=%s order by id', [subject_id])
+    for chapter in chapters:
+        chapter['content'] = json.loads(chapter['content'])
     
-    return jsonify({"chapter": chapter}), 200
+    return jsonify({"chapter": chapters}), 200
 
 
 @app.route('/subject/<int:subject_id>/chapter', methods=['POST'])
