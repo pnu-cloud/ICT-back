@@ -6,6 +6,10 @@ import os
 import io
 import json
 import threading
+import weave
+from openai import OpenAI
+import pandas as pd
+import time
 
 
 app = Flask(__name__)
@@ -24,9 +28,12 @@ cors = CORS(app, resources={
     },
 }, supports_credentials=True)
 
+
 API_KEY = os.getenv('OPENAI_API_KEY')
 if not API_KEY:
     raise ValueError("OPENAI_API_KEY environment variable is not set")
+
+client = OpenAI(api_key=API_KEY)
 
 def get_db_connection():
     return psycopg2.connect(os.environ['DATABASE_URL'])
@@ -46,7 +53,29 @@ def execute_query(query, args=(), fetchone=False, fetchall=False, commit=False):
     conn.close()
     return result
 
+def generate_content(gpt_assistant_prompt: str, gpt_user_prompt: str) -> dict:
+    gpt_prompt = f"{gpt_assistant_prompt} {gpt_user_prompt}"
+    messages = [
+        {"role": "assistant", "content": gpt_assistant_prompt},
+        {"role": "user", "content": gpt_user_prompt}
+    ]
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=messages,
+        temperature=0.2,
+        max_tokens=3000,
+        frequency_penalty=0.0
+    )
+    response_text = response.choices[0].message.content
+    tokens_used = response.usage.total_tokens
+    
+    return response_text
+
 
 @app.route('/', methods=['GET'])
 def index():
-    return jsonify({"message": "API SERVER"}), 200
+    gpt_assistant_prompt = "학생들이 내용을 입력하면 관련된 내용으로 문제를 만들고 풀이를 제공해야 해. 주어진 내용에 대한 문제를 만들어줘"
+    gpt_user_prompt = "컴퓨터 알고리즘 - 정렬"
+    
+    result = generate_content(gpt_assistant_prompt, gpt_user_prompt)
+    return jsonify(result), 200

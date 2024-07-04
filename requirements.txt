@@ -2,3 +2,6 @@ Flask
 Flask-Session
 Flask-Cors
 psycopg2-binary
+openai
+weave
+pandas
