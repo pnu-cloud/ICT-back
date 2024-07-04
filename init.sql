@@ -32,7 +32,7 @@ CREATE TABLE "problem" (
 	"quiz_id"	integer	NOT NULL,
 	"title"	text	NULL,
 	"question"	text	NULL,
-	"correct_answer"	text	NULL,
+	"feedback"	text	NULL,
 	"solution"	text	NULL,
 	"user_answer"	text	NULL,
 	"is_correct"	boolean	NULL
