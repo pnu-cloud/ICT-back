@@ -238,7 +238,7 @@ def quiz_create(chapter_id):
             'insert into "problem"(quiz_id, question) values (%s, %s) RETURNING id',
             [quiz_id, results])
         
-    return jsonify(), 200
+    return jsonify({"quiz_id": quiz_id}), 200
 
 
 @app.route('/subject/chapter/quiz/<int:quiz_id>', methods=['GET'])
