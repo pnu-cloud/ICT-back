@@ -111,3 +111,35 @@ def signin():
 
     session['user_id'] = user['id']
     return jsonify(user), 200
+
+
+@app.route('/subject', methods=['GET'])
+def subject_list():
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    subjects = db.select_fetchall('select * from "subject" where user_id=%s order by id', [user_id])
+
+    return jsonify({"subject": [subjects]}), 200
+
+
+@app.route('/subject', methods=['POST'])
+def subject_add():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
+
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    subject_id = db.execute_fetchone(
+        'insert into "subject"(user_id, title, text) values (%s, %s, %s) RETURNING id',
+        [user_id, data['title'], data['text']])[0]
+
+    subject = db.select_fetchone('select id, title, text from "subject" where id=%s', [subject_id])
+
+    return jsonify(subject), 200
