@@ -268,7 +268,7 @@ def problem_submit(problem_id):
     gpt_assistant_prompt = """
 제공하주는 question은 문제이고 user_answer은 학생이 제출한 답이야.
 문제에 대해 학생에 제출한 답의 정답 유무를 확인하고,
-맞은 경우 True만 출력하고 틀렸다면 틀렸다고 판단한 이유를 출력해줘.
+맞은 경우 True만 출력하고 틀렸다면 틀렸다고 판단한 이유만 출력해줘.
     """
     gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {data['user_answer']}"
     print(gpt_user_prompt)
@@ -282,6 +282,34 @@ def problem_submit(problem_id):
         db.execute('update "problem" set user_answer=%s, is_correct=%s, feedback=%s where id=%s', [data['user_answer'], False, result, problem_id])
 
     problem = db.select_fetchone('select * from "problem" where id=%s', [problem_id])
+
+    return jsonify(problem), 200
+
+
+@app.route('/subject/chapter/quiz/problem/<int:problem_id>/solution', methods=['GET'])
+def problem_solution(problem_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    problem = db.select_fetchone('select * from "problem" where id=%s', [problem_id])
+
+    if problem['solution'] is None:
+        gpt_assistant_prompt = """
+    제공하주는 question은 문제이고 user_answer은 학생이 제출한 답이야.
+    만약 틀렸다면 틀린 이유를 분석해주고 올바른 풀이를 작성해줘.
+    만약 맞다면 문제에 관련된 정보를 제공하거나 다른 풀이 방법이 있다면 알려줘.
+        """
+        gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {problem['user_answer']}"
+        print(gpt_user_prompt)
+
+        result = generate_content(gpt_assistant_prompt, gpt_user_prompt)
+        print(result)
+
+        db.execute('update "problem" set solution=%s where id=%s', [result, problem_id])
+
+        problem = db.select_fetchone('select * from "problem" where id=%s', [problem_id])
 
     return jsonify(problem), 200
 
