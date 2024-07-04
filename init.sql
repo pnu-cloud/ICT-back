@@ -12,16 +12,17 @@ DROP TABLE IF EXISTS "subject";
 CREATE TABLE "subject" (
 	"id"	serial	NOT NULL,
 	"user_id"	integer	NOT NULL,
-	"title"	varchar(255)	NULL
+	"title"	varchar(255)	NULL,
+	"text"	text	NULL
 );
 
-DROP TABLE IF EXISTS "content";
+DROP TABLE IF EXISTS "chapter";
 
-CREATE TABLE "content" (
+CREATE TABLE "chapter" (
 	"id"	serial	NOT NULL,
 	"subject_id"	serial	NOT NULL,
 	"title"	varchar(255)	NULL,
-	"content"	varchar(255)	NULL
+	"content"	text	NULL
 );
 
 DROP TABLE IF EXISTS "problem";
@@ -41,7 +42,7 @@ DROP TABLE IF EXISTS "quiz";
 
 CREATE TABLE "quiz" (
 	"id"	serial	NOT NULL,
-	"content_id"	integer	NOT NULL,
+	"chapter_id"	integer	NOT NULL,
 	"total_count"	integer	NULL,
 	"submit_count"	integer	NULL,
 	"correct_count"	integer	NULL
@@ -55,7 +56,7 @@ ALTER TABLE "subject" ADD CONSTRAINT "PK_SUBJECT" PRIMARY KEY (
 	"id"
 );
 
-ALTER TABLE "content" ADD CONSTRAINT "PK_CONTENT" PRIMARY KEY (
+ALTER TABLE "chapter" ADD CONSTRAINT "PK_CHAPTER" PRIMARY KEY (
 	"id"
 );
 
@@ -74,7 +75,7 @@ REFERENCES "user" (
 	"id"
 );
 
-ALTER TABLE "content" ADD CONSTRAINT "FK_subject_TO_content_1" FOREIGN KEY (
+ALTER TABLE "chapter" ADD CONSTRAINT "FK_subject_TO_chapter_1" FOREIGN KEY (
 	"subject_id"
 )
 REFERENCES "subject" (
@@ -88,9 +89,10 @@ REFERENCES "quiz" (
 	"id"
 );
 
-ALTER TABLE "quiz" ADD CONSTRAINT "FK_content_TO_quiz_1" FOREIGN KEY (
-	"content_id"
+ALTER TABLE "quiz" ADD CONSTRAINT "FK_chapter_TO_quiz_1" FOREIGN KEY (
+	"chapter_id"
 )
-REFERENCES "content" (
+REFERENCES "chapter" (
 	"id"
 );
+
