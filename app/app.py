@@ -122,7 +122,7 @@ def subject_list():
     db = Database()
     subjects = db.select_fetchall('select * from "subject" where user_id=%s order by id', [user_id])
 
-    return jsonify({"subject": [subjects]}), 200
+    return jsonify({"subject": subjects}), 200
 
 
 @app.route('/subject', methods=['POST'])
