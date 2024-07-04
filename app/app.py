@@ -165,9 +165,7 @@ def chapter_list(subject_id):
 
     db = Database()
     chapters = db.select_fetchall('select * from "chapter" where subject_id=%s order by id', [subject_id])
-    for chapter in chapters:
-        chapter['content'] = json.loads(chapter['content'])
-    
+
     return jsonify({"chapter": chapters}), 200
 
 
@@ -184,10 +182,9 @@ def chapter_add(subject_id):
     db = Database()
     chapter_id = db.execute_fetchone(
         'insert into "chapter"(subject_id, title, content) values (%s, %s, %s) RETURNING id',
-        [subject_id, data['chapter'], json.dumps(data['contents'])])[0]
+        [subject_id, data['chapter'], data['contents']])[0]
 
     chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [chapter_id])
-    chapter['content'] = json.loads(chapter['content'])
 
     return jsonify(chapter), 200
 
