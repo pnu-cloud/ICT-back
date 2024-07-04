@@ -13,7 +13,8 @@ CREATE TABLE "subject" (
 	"id"	serial	NOT NULL,
 	"user_id"	integer	NOT NULL,
 	"title"	varchar(255)	NULL,
-	"text"	text	NULL
+	"text"	text	NULL,
+    "progress" integer DEFAULT 0
 );
 
 DROP TABLE IF EXISTS "chapter";
