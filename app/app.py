@@ -143,3 +143,13 @@ def subject_add():
     subject = db.select_fetchone('select id, title, text from "subject" where id=%s', [subject_id])
 
     return jsonify(subject), 200
+
+
+
+
+
+@app.route('/dev/login', methods=['GET'])
+def test_Login():
+    session['user_id'] = 1
+    return jsonify({"message": "임시 로그인 - user 1"}), 200
+
