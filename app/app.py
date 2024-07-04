@@ -145,7 +145,7 @@ def subject_add():
     return jsonify(subject), 200
 
 
-@app.route('/subject/<int:subject_id>/chapter', methods=['GET'])
+@app.route('/subject/<int:subject_id>', methods=['GET'])
 def get_subject(subject_id):
     user_id = session.get('user_id')
     if user_id is None:
@@ -155,6 +155,40 @@ def get_subject(subject_id):
     subject = db.select_fetchone('select id, title, text from "subject" where subject_id=%s', [subject_id])
 
     return jsonify(subject), 200
+
+
+@app.route('/subject/<int:subject_id>/chapter', methods=['GET'])
+def chapter_list(subject_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    chapter = db.select_fetchall('select * from "chapter" where subject_id=%s order by id', [subject_id])
+    chapter['content'] = json.loads(chapter['content'])
+    
+    return jsonify({"chapter": chapter}), 200
+
+
+@app.route('/subject/<int:subject_id>/chapter', methods=['POST'])
+def chapter_add(subject_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
+
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    chapter_id = db.execute_fetchone(
+        'insert into "chapter"(subject_id, title, content) values (%s, %s, %s) RETURNING id',
+        [subject_id, data['chapter'], json.dumps(data['contents'])])[0]
+
+    chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [chapter_id])
+    chapter['content'] = json.loads(chapter['content'])
+
+    return jsonify(chapter), 200
 
 
 
