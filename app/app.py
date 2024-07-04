@@ -220,8 +220,9 @@ def quiz_create(chapter_id):
     gpt_assistant_prompt = """
 학생이 특정 지식을 학습할 수 있도록 제공한 목차나 내용에 대해 문제를 생성해야 하는데 제공되는 언어에 상관없이 한국어로 문제를 출제해줘.
 문제는 객관식이나 단답형 주관식을 적절히 섞어서 제작하고 추후 정답 확인이나 풀이는 별도로 질의할 예정이니 부가적인 설명은 생략하고 텍스트로만 이루어진 문제 본문만 작성해줘.
-여러 문제를 생성하되 JSON 배열로 텍스트로만 이루어지도록 결과를 생성해야 하고 문제 유형이나 보기를 별도로 JSON에 담지 말고 문제 본문 내에 함께 작성하고 문제 본문 앞에 숫자를 넣지말고 [문제 유형]을 넣어서 생생해줘 줄바꿈은 <br>로 하면 돼.
+여러 문제를 생성하되 JSON 배열로 이루어지도록 결과를 생성해야 하고 문제 유형이나 보기를 별도로 JSON에 담지 말고 문제 본문 내에 함께 작성하고 문제 본문 앞에 숫자를 넣지말고 [문제 유형]을 넣어서 생생해줘 줄바꿈은 <br>로 하면 돼.
 문제 유형은 (객관식: 주어진 보기에서 숫자 고르기) (단답형: 설명을 보고 특정한 단어를 작성) (주관식: 주어진 상황을 서술식으로 설명해야 하는 문제)이야.
+출력 형식은 ["[객관식] 문제 내용", "[단답형] 문제 내용", "[주관식] 문제 내용"] 와 같이 이루어져야 해
     """
     gpt_user_prompt = chapter.get('content', "")
 
@@ -251,6 +252,42 @@ def problem_list(quiz_id):
     problems = db.select_fetchall('select * from "problem" where quiz_id=%s order by id', [quiz_id])
 
     return jsonify({"problem": problems}), 200
+
+
+@app.route('/subject/chapter/quiz/problem/<int:problem_id>', methods=['POST'])
+def problem_submit(problem_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    problem = db.select_fetchone('select * from "problem" where id=%s', [problem_id])
+
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
+
+    gpt_assistant_prompt = """
+제공하주는 question은 문제이고 user_answer은 학생이 제출한 답이야.
+문제에 대해 학생에 제출한 답의 정답 유무를 확인하고,
+맞은 경우 True만 출력하고 틀렸다면 틀렸다고 판단한 이유를 출력해줘.
+    """
+    gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {data['user_answer']}"
+    print(gpt_user_prompt)
+
+    result = generate_content(gpt_assistant_prompt, gpt_user_prompt)
+    print(result)
+
+    if (result == "True"):
+        db.execute('update "problem" set user_answer=%s, is_correct=%s where id=%s', [data['user_answer'], True, problem_id])
+    else:
+        db.execute('update "problem" set user_answer=%s, is_correct=%s, feedback=%s where id=%s', [data['user_answer'], False, result, problem_id])
+
+    problem = db.select_fetchone('select * from "problem" where id=%s', [problem_id])
+
+    return jsonify(problem), 200
+
 
 
 
