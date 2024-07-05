@@ -329,6 +329,7 @@ def problem_solution(problem_id):
     제공하주는 question은 문제이고 user_answer은 학생이 제출한 답이야.
     만약 틀렸다면 틀린 이유를 분석해주고 올바른 풀이를 작성해줘.
     만약 맞다면 문제에 관련된 정보를 제공하거나 다른 풀이 방법이 있다면 알려줘.
+    HTML에 그대로 출력할거라 문자열로 보여주고 HTML 태그만 사용가능해
         """
         gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {problem['user_answer']}"
         print(gpt_user_prompt)
