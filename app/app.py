@@ -120,7 +120,7 @@ def subject_list():
         return jsonify({"message": "Invalid session or not logged in"}), 403
 
     db = Database()
-    subjects = db.select_fetchall('select * from "subject" where user_id=%s order by id', [user_id])
+    subjects = db.select_fetchall('select * from "subject" where user_id=%s order by id DESC', [user_id])
 
     return jsonify({"subject": subjects}), 200
 
