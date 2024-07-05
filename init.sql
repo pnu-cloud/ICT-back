@@ -68,32 +68,3 @@ ALTER TABLE "problem" ADD CONSTRAINT "PK_PROBLEM" PRIMARY KEY (
 ALTER TABLE "quiz" ADD CONSTRAINT "PK_QUIZ" PRIMARY KEY (
 	"id"
 );
-
-ALTER TABLE "subject" ADD CONSTRAINT "FK_user_TO_subject_1" FOREIGN KEY (
-	"user_id"
-)
-REFERENCES "user" (
-	"id"
-);
-
-ALTER TABLE "chapter" ADD CONSTRAINT "FK_subject_TO_chapter_1" FOREIGN KEY (
-	"subject_id"
-)
-REFERENCES "subject" (
-	"id"
-);
-
-ALTER TABLE "problem" ADD CONSTRAINT "FK_quiz_TO_problem_1" FOREIGN KEY (
-	"quiz_id"
-)
-REFERENCES "quiz" (
-	"id"
-);
-
-ALTER TABLE "quiz" ADD CONSTRAINT "FK_chapter_TO_quiz_1" FOREIGN KEY (
-	"chapter_id"
-)
-REFERENCES "chapter" (
-	"id"
-);
-
