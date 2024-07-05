@@ -207,7 +207,7 @@ def chapter_set(chapter_id):
     return jsonify(chapter), 200
 
 
-@app.route('/subject/chapter/<int:chapter_id>', methods=['POST'])
+@app.route('/subject/chapter/<int:chapter_id>', methods=['DELETE'])
 def chapter_del(chapter_id):
     user_id = session.get('user_id')
     if user_id is None:
