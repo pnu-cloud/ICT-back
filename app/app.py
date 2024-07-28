@@ -405,6 +405,8 @@ def problem_reset(problem_id):
     db.execute('update "problem" set user_answer=%s, is_correct=%s, feedback=%s, solution=%s where id=%s',
                [None, None, None, None, problem_id])
 
+    return ""
+
 
 @app.route('/subject/chapter/quiz/problem/<int:problem_id>/solution', methods=['GET'])
 def problem_solution(problem_id):
