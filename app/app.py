@@ -496,7 +496,7 @@ def get_wrong():
     FROM "user" u
     JOIN subject s ON u.id = s.user_id
     JOIN chapter c ON s.id = c.subject_id
-    JOIN quiz q ON s.id = q.chapter_id
+    JOIN quiz q ON c.id = q.chapter_id
     JOIN problem p ON q.id=p.quiz_id
     WHERE u.id=%s and p.is_correct=FALSE;
         """, [user_id])
