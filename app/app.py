@@ -314,6 +314,7 @@ def quiz_create(chapter_id):
     gpt_user_prompt = chapter.get('content', "")
 
     results = generate_content(gpt_assistant_prompt, gpt_user_prompt)
+    msg = results
     print(results)
     results = results[results.find('['):(results.rfind(']')+1)]
     try:
@@ -336,7 +337,7 @@ def quiz_create(chapter_id):
 
         return jsonify(quiz), 200
     except json.JSONDecodeError:
-        return jsonify({"message": results}), 421
+        return jsonify({"message": msg}), 421
 
 
 
