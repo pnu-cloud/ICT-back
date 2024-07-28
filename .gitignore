@@ -1,4 +1,7 @@
 
 docker-compose.yml
 app/database.py
+flask_session
 .idea
+*.pyc
+
