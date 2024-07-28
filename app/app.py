@@ -39,10 +39,10 @@ if not API_KEY:
 client = OpenAI(api_key=API_KEY)
 
 
-def generate_content(gpt_assistant_prompt: str, gpt_user_prompt: str) -> str:
-    gpt_prompt = f"{gpt_assistant_prompt} {gpt_user_prompt}"
+def generate_content(gpt_system_prompt: str, gpt_user_prompt: str) -> str:
+    gpt_prompt = f"{gpt_system_prompt} {gpt_user_prompt}"
     messages = [
-        {"role": "assistant", "content": gpt_assistant_prompt},
+        {"role": "system", "content": gpt_system_prompt},
         {"role": "user", "content": gpt_user_prompt}
     ]
     response = client.chat.completions.create(
@@ -58,13 +58,13 @@ def generate_content(gpt_assistant_prompt: str, gpt_user_prompt: str) -> str:
     return response_text
 
 
-@app.route('/', methods=['GET'])
-def index():
-    gpt_assistant_prompt = "학생들이 내용을 입력하면 관련된 내용으로 문제를 만들고 풀이를 제공해야 해. 주어진 내용에 대한 문제를 만들어줘"
-    gpt_user_prompt = "컴퓨터 알고리즘 - 정렬"
-    
-    result = generate_content(gpt_assistant_prompt, gpt_user_prompt)
-    return jsonify(result), 200
+# @app.route('/', methods=['GET'])
+# def index():
+#     gpt_assistant_prompt = "학생들이 내용을 입력하면 관련된 내용으로 문제를 만들고 풀이를 제공해야 해. 주어진 내용에 대한 문제를 만들어줘"
+#     gpt_user_prompt = "컴퓨터 알고리즘 - 정렬"
+#
+#     result = generate_content(gpt_assistant_prompt, gpt_user_prompt)
+#     return jsonify(result), 200
 
 
 @app.route('/user', methods=['GET'])
@@ -306,7 +306,7 @@ def quiz_create(chapter_id):
 여러 문제를 반환받아 파싱하기 위해 JSON 문자열 배열로 이루어지도록 결과를 생성해야 하고 문제 유형이나 보기를 별도로 담지 말고 문제 본문 텍스트내에 함께 작성해줘.
 문제 유형은 (객관식: 주어진 보기에서 숫자 고르기) (단답형: 설명을 보고 특정한 단어를 작성) (주관식: 주어진 상황을 서술식으로 설명해야 하는 문제)이야.
 특히 객관식 문제는 동일한 보기가 중복되지 않고 답이 하나만 존재하도록 보기를 만들 때 유의해야 하고 틀린 보기는 유사한 도메인 단어로 작성해줘.
-문제 본문 앞에 숫자를 넣지말고 [문제 유형]을 넣어서 생생해줘 그리고 문제 본문은 HTML을 이용해 꾸미거나 강조할 수 있고 줄바꿈은 <br>로 출력하면 돼.
+문제 본문 앞에 숫자를 넣지말고 [문제 유형]을 넣어서 생생해줘 그리고 문제 본문은 HTML을 이용해 표현할 수 있고 줄바꿈은 <br>로 출력하면 돼.
 따라서 응답 형식은 ["[객관식] 문제 내용", ..., "[단답형] 문제 내용", ..., "[주관식] 문제 내용"] 와 같이 JSON으로 파싱이 가능해야 해.
 
 - 응답 형식: ["[유형] 문제 내용<br>보기", "[유형] 문제 내용" .... ]
@@ -371,11 +371,11 @@ def problem_submit(problem_id):
         return jsonify({"error": "Invalid or missing JSON data"}), 400
 
     gpt_assistant_prompt = """
-제공하주는 question은 문제이고 user_answer은 학생이 제출한 답이야.
-문제에 대해 학생에 제출한 답의 정답 유무를 확인해줘.
-맞은 경우 True라는 문자열만 출력하고, 틀렸다면 틀렸다고 판단한 이유를 알려주고 정답은 서술하지 말아줘.
-정답 여부 응답을 확인할 때 문자열 "True"와 단순 비교하여 판단하기 때문에 대소문자를 유의하고 다른 문자가 함께 포함되면 안돼.
-틀린 이유를 작성한다면 학생 같이 대상을 지칭하지 말고 이유만 ~입니다 와 같이 서술해줘.
+제공하주는 question은 문제이고 user_answer은 학생이 제출한 답입니다.
+문제에 대해 학생에 제출한 답의 정답 유무를 확인해주세요.
+맞은 경우 True라는 문자열만 출력하고, 틀렸다면 틀렸다고 판단한 이유를 알려주고 직접적으로 정답은 서술하면 안됩니다.
+정답 여부 응답을 확인할 때 문자열 "True"와 단순 비교하여 판단하기 때문에 대소문자를 유의하고 다른 문자가 함께 포함되면 될 수 없습니다.
+틀린 이유를 작성한다면 학생 같이 대상을 지칭하지 말고 이유만 ~입니다 와 같이 서술하세요.
 - 응답 형식(정답): True
 - 응답 형식(오답): 틀렸다고 판단한 이유 서술 (정답 비공개)
     """
@@ -447,11 +447,11 @@ def problem_solution(problem_id):
 
     if problem['solution'] is None:
         gpt_assistant_prompt = """
-제공하주는 question은 문제이고 user_answer은 학생이 제출한 답이야.
-만약 틀렸다면 틀린 이유를 분석해주고 올바른 풀이를 작성해줘.
-만약 맞다면 문제에 풀이에 학습에 도움이 될 수 있도록 관련된 정보를 제공하거나 다른 풀이 방법이 있다면 알려줘.
-그리고 작성할 때는 학생 같이 대상을 지칭하지 말고 정보만 ~입니다 형식으로 서술해줘.
-응답받은 내용은 HTML 형식으로 출력할거라 HTML 태그를 사용해서 강조하거나 색상을 넣는 등 보기 좋게 만들어주면 좋아.
+제공하주는 question은 문제이고 user_answer은 학생이 제출한 답입니다.
+학생의 답이 맞다면 문제에 풀이나 학습에 도움이 될 수 있도록 관련된 정보를 제공하거나 더 좋은 풀이가 있다면 알려주세요.
+만약 학생의 답이 틀렸다면 틀린 이유를 분석하고 올바른 풀이를 자세하게 작성하세요.
+그리고 작성할 때는 학생 같이 대상을 지칭하지 말고 정보만 ~입니다 형식으로 서술해야 하며,
+응답받은 내용은 HTML 형식으로 출력하므로 HTML 태그를 사용해서 강조하거나 색상을 넣는 등 보기 좋게 만들어주면 좋습니다.
         """
         gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {problem['user_answer']}"
         print(gpt_user_prompt)
@@ -500,7 +500,7 @@ def get_wrong():
     JOIN problem p ON q.id=p.quiz_id
     WHERE u.id=%s and p.is_correct=FALSE;
         """, [user_id])
-    return jsonify(wrong), 403
+    return jsonify(wrong), 200
 
 
 @app.route('/grade')
