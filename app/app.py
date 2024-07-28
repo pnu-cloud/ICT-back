@@ -330,6 +330,12 @@ def problem_submit(problem_id):
 
     problem = db.select_fetchone('select * from "problem" where id=%s', [problem_id])
 
+    db.execute('update "quiz" set submit_count=(select count(*) from "problem" where quiz_id=%s and user_answer is not null) where id=%s',
+               [problem['quiz_id'], problem['quiz_id']])
+
+    db.execute('update "quiz" set correct_count=(select count(*) from "problem" where quiz_id=%s and is_correct=True) where id=%s',
+               [problem['quiz_id'], problem['quiz_id']])
+
     db.execute("""
     update "quiz" set progress=
         (100 * (select count(*) from problem where quiz_id=%s and is_correct=True) / (select count(*) from problem where quiz_id=%s))
@@ -438,13 +444,33 @@ def get_grade():
             """, [user_id])
 
     for subject in grade['subject']:
+        subject['total_count'] = 0
+        subject['submit_count'] = 0
+        subject['correct_count'] = 0
+
         subject['chapter'] = db.select_fetchall("""
         SELECT *
         FROM "chapter"
         WHERE subject_id=%s;
             """, [subject['id']])
 
-    return jsonify(grade), 403
+        for chapter in subject['chapter']:
+            count = db.select_fetchone("""
+            SELECT sum(total_count) as total_count, sum(submit_count) as submit_count, sum(correct_count) as correct_count
+            FROM "quiz"
+            WHERE chapter_id=%s;
+                """, [chapter['id']])
+
+            if count['total_count'] is not None:
+                chapter['total_count'] = count['total_count']
+                chapter['submit_count'] = count['submit_count']
+                chapter['correct_count'] = count['correct_count']
+
+                subject['total_count'] += chapter['total_count']
+                subject['submit_count'] += chapter['submit_count']
+                subject['correct_count'] += chapter['correct_count']
+
+    return jsonify(grade), 200
 
 
 @app.route('/dev/login', methods=['GET'])
