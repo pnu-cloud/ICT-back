@@ -10,8 +10,7 @@ import weave
 from openai import OpenAI
 import pandas as pd
 import time
-from datetime import datetime
-
+from datetime import datetime, timedelta
 
 from database import Database
 
@@ -320,7 +319,7 @@ def quiz_create(chapter_id):
     try:
         results = json.loads(results)
 
-        now = datetime.now()
+        now = datetime.now() + timedelta(hours=9)
 
         quiz_id = db.execute_fetchone(
             'insert into "quiz"(chapter_id, title) values (%s, %s) RETURNING id',
