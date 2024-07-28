@@ -47,9 +47,9 @@ def generate_content(gpt_assistant_prompt: str, gpt_user_prompt: str) -> dict:
     response = client.chat.completions.create(
         model="gpt-4",
         messages=messages,
-        temperature=0.2,
+        temperature=1.0,
         max_tokens=1024,
-        frequency_penalty=0.0
+        frequency_penalty=0.5
     )
     response_text = response.choices[0].message.content
     tokens_used = response.usage.total_tokens
@@ -249,18 +249,15 @@ def quiz_create(chapter_id):
         return jsonify({"message": "Invalid session or not logged in"}), 403
 
     db = Database()
-    quiz_id = db.execute_fetchone(
-        'insert into "quiz"(chapter_id) values (%s) RETURNING id',
-        [chapter_id])[0]
 
     chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [chapter_id])
 
     gpt_assistant_prompt = """
 학생이 특정 지식을 학습할 수 있도록 제공한 목차나 내용에 대해 문제를 생성해야 하는데 제공되는 언어에 상관없이 한국어로 문제를 출제해줘.
 문제는 객관식이나 단답형 주관식을 적절히 섞어서 제작하고 추후 정답 확인이나 풀이는 별도로 질의할 예정이니 부가적인 설명은 생략하고 텍스트로만 이루어진 문제 본문만 작성해줘.
-여러 문제를 생성하되 JSON 배열로 이루어지도록 결과를 생성해야 하고 문제 유형이나 보기를 별도로 JSON에 담지 말고 문제 본문 내에 함께 작성하고 문제 본문 앞에 숫자를 넣지말고 [문제 유형]을 넣어서 생생해줘 줄바꿈은 <br>로 하면 돼.
-문제 유형은 (객관식: 주어진 보기에서 숫자 고르기) (단답형: 설명을 보고 특정한 단어를 작성) (주관식: 주어진 상황을 서술식으로 설명해야 하는 문제)이야.
-출력 형식은 ["[객관식] 문제 내용", "[단답형] 문제 내용", "[주관식] 문제 내용"] 와 같이 이루어져야 해
+여러 문제를 반환받아 파싱하기 위해 JSON 배열로 이루어지도록 결과를 생성해야 하고 문제 유형이나 보기를 별도로 JSON에 담지 말고 문제 본문 내에 함께 작성하고 문제 본문 앞에 숫자를 넣지말고 [문제 유형]을 넣어서 생생해줘 줄바꿈은 <br>로 출력하면 돼.
+문제 유형은 (객관식: 주어진 보기에서 숫자 고르기) (단답형: 설명을 보고 특정한 단어를 작성) (주관식: 주어진 상황을 서술식으로 설명해야 하는 문제)이야. 특히 객관식 문제는 동일한 보기가 중복되지 않고 답이 하나만 존재하도록 보기를 만들 때 유의해야 하고 틀린 보기는 유사한 도메인 단어로 작성해줘.
+마지막으로 출력 형식은 ["[객관식] 문제 내용", "[단답형] 문제 내용", "[주관식] 문제 내용"] 와 같이 이루어져야 하고 JSON 배열 형식 외 다른 설명이 들어갈 경우 파싱에 오류가 발생하기 때문에 앞 뒤에 부가적인 내용을 작성하지 마.
     """
     gpt_user_prompt = chapter.get('content', "")
 
@@ -268,16 +265,21 @@ def quiz_create(chapter_id):
     print(results)
     try:
         results = json.loads(results)
+        quiz_id = db.execute_fetchone(
+            'insert into "quiz"(chapter_id) values (%s) RETURNING id',
+            [chapter_id])[0]
+
         for result in results:
-            db.execute_fetchone(
+            db.execute(
             'insert into "problem"(quiz_id, question) values (%s, %s) RETURNING id',
             [quiz_id, result])
+
+        db.execute('update "quiz" set total_count=(select count(*) from "problem" where quiz_id=%s) where id=%s', [quiz_id, quiz_id])
+
+        return jsonify({"quiz_id": quiz_id}), 200
     except json.JSONDecodeError:
-        db.execute_fetchone(
-            'insert into "problem"(quiz_id, question) values (%s, %s) RETURNING id',
-            [quiz_id, results])
-        
-    return jsonify({"quiz_id": quiz_id}), 200
+        return jsonify({"message": results}), 421
+
 
 
 @app.route('/subject/chapter/quiz/<int:quiz_id>', methods=['GET'])
@@ -311,8 +313,9 @@ def problem_submit(problem_id):
 
     gpt_assistant_prompt = """
 제공하주는 question은 문제이고 user_answer은 학생이 제출한 답이야.
-문제에 대해 학생에 제출한 답의 정답 유무를 확인하고,
-맞은 경우 True만 출력하고 틀렸다면 틀렸다고 판단한 이유만 출력해줘.
+문제에 대해 학생에 제출한 답의 정답 유무를 확인하고, 맞은 경우 True라는 문자열만 출력하고 틀렸다면 틀렸다고 판단한 이유만 출력해줘.
+정답 여부 응답을 확인할 때 문자열 "True"와 단순 비교하여 판단하기 때문에 대소문자를 유의하고 다른 문자가 함께 포함되면 안돼.
+틀린 이유를 작성한다면 학생 같이 대상을 지칭하지 말고 이유만 ~입니다 와 같이 서술해줘
     """
     gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {data['user_answer']}"
     print(gpt_user_prompt)
@@ -320,7 +323,7 @@ def problem_submit(problem_id):
     result = generate_content(gpt_assistant_prompt, gpt_user_prompt)
     print(result)
 
-    if (result == "True"):
+    if "True" in result:
         db.execute('update "problem" set user_answer=%s, is_correct=%s where id=%s', [data['user_answer'], True, problem_id])
     else:
         db.execute('update "problem" set user_answer=%s, is_correct=%s, feedback=%s where id=%s', [data['user_answer'], False, result, problem_id])
@@ -366,7 +369,8 @@ def problem_solution(problem_id):
     제공하주는 question은 문제이고 user_answer은 학생이 제출한 답이야.
     만약 틀렸다면 틀린 이유를 분석해주고 올바른 풀이를 작성해줘.
     만약 맞다면 문제에 관련된 정보를 제공하거나 다른 풀이 방법이 있다면 알려줘.
-    HTML에 그대로 출력할거라 문자열로 보여주고 HTML 태그만 사용가능해
+    그리고 작성할 때는 학생 같이 대상을 지칭하지 말고 풀이나 문제를 해결하는데 필요한 정보를 서술해줘.
+    응답받은 내용은 HTML에 그대로 출력할거라 문자열로 보여주고 HTML 태그만 사용가능해.
         """
         gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {problem['user_answer']}"
         print(gpt_user_prompt)
@@ -400,7 +404,7 @@ WHERE q.id=%s;
 
 
 @app.route('/wrong')
-def wrong():
+def get_wrong():
     user_id = session.get('user_id')
     if user_id is None:
         return jsonify({"message": "Invalid session or not logged in"}), 403
