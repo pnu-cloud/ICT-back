@@ -175,6 +175,19 @@ def subject_update(subject_id):
     return jsonify(subject), 200
 
 
+@app.route('/subject/<int:subject_id>', methods=['DELETE'])
+def subject_del(subject_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    db.execute('delete from "subject" where id=%s', [subject_id])
+
+    return jsonify(), 200
+
+
+
 @app.route('/subject/<int:subject_id>/chapter', methods=['GET'])
 def chapter_list(subject_id):
     user_id = session.get('user_id')
@@ -430,7 +443,7 @@ def problem_solution(problem_id):
 만약 틀렸다면 틀린 이유를 분석해주고 올바른 풀이를 작성해줘.
 만약 맞다면 문제에 풀이에 학습에 도움이 될 수 있도록 관련된 정보를 제공하거나 다른 풀이 방법이 있다면 알려줘.
 그리고 작성할 때는 학생 같이 대상을 지칭하지 말고 정보만 ~입니다 형식으로 서술해줘.
-응답받은 내용은 HTML에 그대로 출력할거라 문자열로 보여주고 HTML 태그만 사용가능해.
+응답받은 내용은 HTML 형식으로 출력할거라 HTML 태그를 사용해서 강조하거나 색상을 넣는 등 보기 좋게 만들어주면 좋아.
         """
         gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {problem['user_answer']}"
         print(gpt_user_prompt)
