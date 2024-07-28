@@ -25,7 +25,7 @@ Session(app)
 
 cors = CORS(app, resources={
   r"/*": {
-        "origin": ["ict.pnu.app", "bict.pnu.app", "127.0.0.1:5500"],
+        "origin": ["ict.pnu.app", "bict.pnu.app", "localhost:5500"],
         "allow_headers": ["Content-Type", "Authorization"]
     },
 }, supports_credentials=True)
@@ -76,7 +76,8 @@ def get_user():
      
     else:
         return jsonify({"message": "User not logged in"}), 403
-    
+
+
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
@@ -187,7 +188,14 @@ def chapter_add(subject_id):
         'insert into "chapter"(subject_id, title, content) values (%s, %s, %s) RETURNING id',
         [subject_id, data['chapter'], data['contents']])[0]
 
-    chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [chapter_id])
+    # chapter = db.select_fetchone('select id, title, content, subject_id from "chapter" where id=%s', [chapter_id])
+    chapter = db.select_fetchone('select * from "chapter" where id=%s', [chapter_id])
+
+    db.execute("""
+    update "subject" set progress=
+        ((select sum(progress) from chapter where subject_id=%s) / (select count(*) from chapter where subject_id=%s))
+        where id=%s
+    """, [chapter['subject_id'], chapter['subject_id'], chapter['subject_id']])
 
     return jsonify(chapter), 200
 
@@ -281,7 +289,11 @@ def problem_list(quiz_id):
     db = Database()
     problems = db.select_fetchall('select * from "problem" where quiz_id=%s order by id', [quiz_id])
 
-    return jsonify({"problem": problems}), 200
+    quiz = db.select_fetchone('select * from "quiz" where id=%s', [quiz_id])
+
+    chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [quiz['chapter_id']])
+
+    return jsonify({"chapter": chapter, "quiz": quiz, "problem": problems}), 200
 
 
 @app.route('/subject/chapter/quiz/problem/<int:problem_id>', methods=['POST'])
@@ -314,6 +326,28 @@ def problem_submit(problem_id):
         db.execute('update "problem" set user_answer=%s, is_correct=%s, feedback=%s where id=%s', [data['user_answer'], False, result, problem_id])
 
     problem = db.select_fetchone('select * from "problem" where id=%s', [problem_id])
+
+    db.execute("""
+    update "quiz" set progress=
+        (100 * (select count(*) from problem where quiz_id=%s and is_correct=True) / (select count(*) from problem where quiz_id=%s))
+        where id=%s
+    """, [problem['quiz_id'], problem['quiz_id'], problem['quiz_id']])
+
+    quiz = db.select_fetchone('select * from "quiz" where id=%s', [problem['quiz_id']])
+
+    db.execute("""  
+    update "chapter" set progress=
+        (select max(progress) from quiz where chapter_id=%s)
+        where id=%s
+    """, [quiz['chapter_id'], quiz['chapter_id']])
+
+    chapter = db.select_fetchone('select * from "chapter" where id=%s', [quiz['chapter_id']])
+
+    db.execute("""
+    update "subject" set progress=
+        ((select sum(progress) from chapter where subject_id=%s) / (select count(progress) from chapter where subject_id=%s))
+        where id=%s
+    """, [chapter['subject_id'], chapter['subject_id'], chapter['subject_id']])
 
     return jsonify(problem), 200
 
