@@ -158,6 +158,23 @@ def get_subject(subject_id):
     return jsonify(subject), 200
 
 
+@app.route('/subject/<int:subject_id>', methods=['PUT'])
+def subject_update(subject_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
+
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    db.execute('update "subject" set title=%s, text=%s where id=%s', [data['title'], data['text'], subject_id])
+    subject = db.select_fetchone('select * from "chapter" where id=%s', [subject_id])
+
+    return jsonify(subject), 200
+
+
 @app.route('/subject/<int:subject_id>/chapter', methods=['GET'])
 def chapter_list(subject_id):
     user_id = session.get('user_id')
@@ -213,6 +230,23 @@ def chapter_set(chapter_id):
     db = Database()
     db.execute('update "chapter" set title=%s, content=%s where id=%s', [data['chapter'], data['contents'], chapter_id])
 
+    chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [chapter_id])
+
+    return jsonify(chapter), 200
+
+
+@app.route('/subject/chapter/<int:chapter_id>', methods=['PUT'])
+def chapter_update(chapter_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
+
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    db.execute('update "chapter" set title=%s, content=%s where id=%s', [data['chapter'], data['contents'], chapter_id])
     chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [chapter_id])
 
     return jsonify(chapter), 200
