@@ -395,6 +395,17 @@ def problem_submit(problem_id):
     return jsonify(problem), 200
 
 
+@app.route('/subject/chapter/quiz/problem/<int:problem_id>', methods=['DELETE'])
+def problem_reset(problem_id):
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    db.execute('update "problem" set user_answer=%s, is_correct=%s, feedback=%s, solution=%s where id=%s',
+               [None, None, None, None, problem_id])
+
+
 @app.route('/subject/chapter/quiz/problem/<int:problem_id>/solution', methods=['GET'])
 def problem_solution(problem_id):
     user_id = session.get('user_id')
