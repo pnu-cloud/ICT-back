@@ -422,6 +422,31 @@ def get_wrong():
     return jsonify(wrong), 403
 
 
+@app.route('/grade')
+def get_grade():
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    grade = {}
+
+    grade['subject'] = db.select_fetchall("""
+        SELECT *
+        FROM "subject"
+        WHERE user_id=%s;
+            """, [user_id])
+
+    for subject in grade['subject']:
+        subject['chapter'] = db.select_fetchall("""
+        SELECT *
+        FROM "chapter"
+        WHERE subject_id=%s;
+            """, [subject['id']])
+
+    return jsonify(grade), 403
+
+
 @app.route('/dev/login', methods=['GET'])
 def test_Login():
     session['user_id'] = 1
