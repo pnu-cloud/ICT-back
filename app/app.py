@@ -38,7 +38,7 @@ if not API_KEY:
 client = OpenAI(api_key=API_KEY)
 
 
-def generate_content(gpt_assistant_prompt: str, gpt_user_prompt: str) -> dict:
+def generate_content(gpt_assistant_prompt: str, gpt_user_prompt: str) -> str:
     gpt_prompt = f"{gpt_assistant_prompt} {gpt_user_prompt}"
     messages = [
         {"role": "assistant", "content": gpt_assistant_prompt},
@@ -287,12 +287,15 @@ def quiz_create(chapter_id):
     chapter = db.select_fetchone('select id, title, content from "chapter" where id=%s', [chapter_id])
 
     gpt_assistant_prompt = """
-학생이 특정 지식을 학습할 수 있도록 제공한 목차나 내용에 대해 문제를 생성해야 하는데 제공되는 언어에 상관없이 한국어로 문제를 출제해줘.
-문제는 객관식이나 단답형 주관식을 적절히 섞어서 제작하고 추후 정답 확인이나 풀이는 별도로 질의할 예정이니 부가적인 설명은 생략하고 텍스트로만 이루어진 문제 본문만 작성해줘.
-여러 문제를 반환받아 파싱하기 위해 JSON 배열로 이루어지도록 결과를 생성해야 하고 문제 유형이나 보기를 별도로 JSON에 담지 말고 문제 본문 내에 함께 작성하고 문제 본문 앞에 숫자를 넣지말고 [문제 유형]을 넣어서 생생해줘 줄바꿈은 <br>로 출력하면 돼.
-문제 유형은 (객관식: 주어진 보기에서 숫자 고르기) (단답형: 설명을 보고 특정한 단어를 작성) (주관식: 주어진 상황을 서술식으로 설명해야 하는 문제)이야. 특히 객관식 문제는 동일한 보기가 중복되지 않고 답이 하나만 존재하도록 보기를 만들 때 유의해야 하고 틀린 보기는 유사한 도메인 단어로 작성해줘.
-마지막으로 출력 형식은 ["[객관식] 문제 내용", "[단답형] 문제 내용", "[주관식] 문제 내용"] 와 같이 이루어져야 하고 JSON 배열 형식 외 다른 설명이 들어갈 경우 파싱에 오류가 발생하기 때문에 앞 뒤에 부가적인 내용을 작성하지 마.
-응답 형식: ["[유형] 문제 내용<br>보기", "[유형] 문제 내용" .... ]
+학생이 학습한 내용을 스스로 평가할 수 있도록 제공한 목차나 내용으로 문제를 만들어야 해.
+추후 정답 확인이나 풀이는 별도로 질의할 예정이니 부가적인 설명은 생략하고 문제 본문만 텍스트로 아래 주어진 형식대로 작성해줘.
+여러 문제를 반환받아 파싱하기 위해 JSON 문자열 배열로 이루어지도록 결과를 생성해야 하고 문제 유형이나 보기를 별도로 담지 말고 문제 본문 텍스트내에 함께 작성해줘.
+문제 유형은 (객관식: 주어진 보기에서 숫자 고르기) (단답형: 설명을 보고 특정한 단어를 작성) (주관식: 주어진 상황을 서술식으로 설명해야 하는 문제)이야.
+특히 객관식 문제는 동일한 보기가 중복되지 않고 답이 하나만 존재하도록 보기를 만들 때 유의해야 하고 틀린 보기는 유사한 도메인 단어로 작성해줘.
+문제 본문 앞에 숫자를 넣지말고 [문제 유형]을 넣어서 생생해줘 줄바꿈은 <br>로 출력하면 돼.
+따라서 응답 형식은 ["[객관식] 문제 내용", ..., "[단답형] 문제 내용", ..., "[주관식] 문제 내용"] 와 같이 JSON 파싱을 위해 [로 시작하고 ]로 끝나야 해 해.
+
+- 응답 형식: ["[유형] 문제 내용<br>보기", "[유형] 문제 내용" .... ]
     """
     gpt_user_prompt = chapter.get('content', "")
 
@@ -348,11 +351,12 @@ def problem_submit(problem_id):
 
     gpt_assistant_prompt = """
 제공하주는 question은 문제이고 user_answer은 학생이 제출한 답이야.
-문제에 대해 학생에 제출한 답의 정답 유무를 확인하고, 맞은 경우 True라는 문자열만 출력하고 틀렸다면 틀렸다고 판단한 이유만 출력해줘.
+문제에 대해 학생에 제출한 답의 정답 유무를 확인해줘.
+맞은 경우 True라는 문자열만 출력하고, 틀렸다면 틀렸다고 판단한 이유를 알려주고 정답은 서술하지 말아줘.
 정답 여부 응답을 확인할 때 문자열 "True"와 단순 비교하여 판단하기 때문에 대소문자를 유의하고 다른 문자가 함께 포함되면 안돼.
 틀린 이유를 작성한다면 학생 같이 대상을 지칭하지 말고 이유만 ~입니다 와 같이 서술해줘.
 - 응답 형식(정답): True
-- 응답 형식(오답): 틀린 이유 서술
+- 응답 형식(오답): 틀렸다고 판단한 이유 서술 (정답 비공개)
     """
     gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {data['user_answer']}"
     print(gpt_user_prompt)
@@ -431,7 +435,7 @@ def problem_solution(problem_id):
         gpt_user_prompt = f"문제: {problem['question']}\n학생 답안: {problem['user_answer']}"
         print(gpt_user_prompt)
 
-        result = generate_content(gpt_assistant_prompt, gpt_user_prompt)
+        result = generate_content(gpt_assistant_prompt, gpt_user_prompt).replace('\n', "<br>")
         print(result)
 
         db.execute('update "problem" set solution=%s where id=%s', [result, problem_id])
