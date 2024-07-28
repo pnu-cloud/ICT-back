@@ -10,6 +10,8 @@ import weave
 from openai import OpenAI
 import pandas as pd
 import time
+from datetime import datetime
+
 
 from database import Database
 
@@ -317,9 +319,12 @@ def quiz_create(chapter_id):
     results = results[results.find('['):(results.rfind(']')+1)]
     try:
         results = json.loads(results)
+
+        now = datetime.now()
+
         quiz_id = db.execute_fetchone(
-            'insert into "quiz"(chapter_id) values (%s) RETURNING id',
-            [chapter_id])[0]
+            'insert into "quiz"(chapter_id, title) values (%s, %s) RETURNING id',
+            [chapter_id, now.strftime('%Y-%m-%d %H:%M')])[0]
 
         for result in results:
             db.execute(
