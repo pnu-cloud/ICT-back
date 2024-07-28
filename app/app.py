@@ -399,6 +399,23 @@ WHERE q.id=%s;
     return jsonify(subject), 200
 
 
+@app.route('/wrong')
+def wrong():
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({"message": "Invalid session or not logged in"}), 403
+
+    db = Database()
+    wrong = db.select_fetchall("""
+    SELECT p.*, c.subject_id, q.chapter_id, p.quiz_id, s.title as subject_title, c.title as chapter_title, q.title as quiz_title
+    FROM "user" u
+    JOIN subject s ON u.id = s.user_id
+    JOIN chapter c ON s.id = c.subject_id
+    JOIN quiz q ON s.id = q.chapter_id
+    JOIN problem p ON q.id=p.quiz_id
+    WHERE u.id=%s and p.is_correct=FALSE;
+        """, [user_id])
+    return jsonify(wrong), 403
 
 
 @app.route('/dev/login', methods=['GET'])
