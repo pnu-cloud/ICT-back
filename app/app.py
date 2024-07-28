@@ -25,7 +25,7 @@ Session(app)
 
 cors = CORS(app, resources={
   r"/*": {
-        "origin": "ict.pnu.app", 
+        "origin": ["ict.pnu.app", "bict.pnu.app", "127.0.0.1:5500"],
         "allow_headers": ["Content-Type", "Authorization"]
     },
 }, supports_credentials=True)
