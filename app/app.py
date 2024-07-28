@@ -333,7 +333,9 @@ def quiz_create(chapter_id):
 
         db.execute('update "quiz" set total_count=(select count(*) from "problem" where quiz_id=%s) where id=%s', [quiz_id, quiz_id])
 
-        return jsonify({"quiz_id": quiz_id}), 200
+        quiz = db.select_fetchone('select * from "quiz" where id=%s', [quiz_id])
+
+        return jsonify(quiz), 200
     except json.JSONDecodeError:
         return jsonify({"message": results}), 421
 
