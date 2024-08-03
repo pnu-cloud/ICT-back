@@ -243,14 +243,14 @@ def chapter_add(subject_id):
         'insert into "chapter"(subject_id, title) values (%s, %s) RETURNING id',
         [subject_id, request.form['chapter']])[0]
 
-    file = None#request.files.get('file', None)
+    file = request.files.get('file', None)
     content = ""
     if file is not None and file.filename[-4:] == '.pdf':
         filename = './data/' + str(chapter_id) + '.pdf'
         file.save(filename)
         content = pdf2content(filename)
     else:
-        content = request.form['content']
+        content = request.form['contents']
 
     db.execute('update "chapter" set content=%s where id=%s', [content, chapter_id])
 
