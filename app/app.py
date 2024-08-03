@@ -200,7 +200,7 @@ def chapter_list(subject_id):
     chapters = db.select_fetchall('select * from "chapter" where subject_id=%s order by id', [subject_id])
 
     for chapter in chapters:
-        chapter['content'] = chapter.get['content'].replace('\n', '<br>')
+        chapter['content'] = chapter['content'].replace('\n', '<br>')
 
     return jsonify({"chapter": chapters}), 200
 
