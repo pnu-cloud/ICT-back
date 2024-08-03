@@ -200,7 +200,7 @@ def chapter_list(subject_id):
     chapters = db.select_fetchall('select * from "chapter" where subject_id=%s order by id', [subject_id])
 
     for chapter in chapters:
-        chapter['content'] = chapter.get('content', "No content").replace('\n', '<br>')
+        chapter['content'] = str(chapter['content']).replace('\n', '<br>')
 
     return jsonify({"chapter": chapters}), 200
 
@@ -243,7 +243,7 @@ def chapter_add(subject_id):
         'insert into "chapter"(subject_id, title) values (%s, %s) RETURNING id',
         [subject_id, request.form['chapter']])[0]
 
-    file = request.files.get('file', None)
+    file = None#request.files.get('file', None)
     content = ""
     if file is not None and file.filename[-4:] == '.pdf':
         filename = './data/' + str(chapter_id) + '.pdf'
